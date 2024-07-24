@@ -30,14 +30,6 @@ inputs:
     description: 'The absolute path from repository root to the SBOM document to be picked.'
     required: false
 
-  # Status Polling Arguments
-  maxStatusPollAttempts:
-    description: 'The maximum number of times the action is permitted to poll the ServiceNow instance for SBOM upload and processing status.'
-    required: false
-  statusAttemptInterval:
-    description: 'The time interval the action will wait between performing a subsequent status poll if previous attempts have not returned with a completed state.'
-    required: false
-
   # POST/Upload API Arguments
   businessApplicationId:
     description: 'SYS ID of the business application to map with the root application of given SBOM.'
