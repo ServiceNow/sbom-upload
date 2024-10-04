@@ -31183,48 +31183,56 @@ function generateUploadUrl(actionArguments) {
         .forEach(([key, value]) => {
         uploadSearchParams.append(key, value);
     });
-    let url = new URL('/api/sbom/core/upload', actionArguments.secrets.snInstanceUrl);
+    let url = new URL("/api/sbom/core/upload", actionArguments.secrets.snInstanceUrl);
     url.search = uploadSearchParams.toString();
+    console.log(url.toString());
     return url;
 }
 async function upload(actionArguments, payload) {
-    console.log('Uploading SBOM to ServiceNow...');
+    console.log("Uploading SBOM to ServiceNow...");
     let uploadUrl = generateUploadUrl(actionArguments);
     let { snSbomUser, snSbomPassword } = actionArguments.secrets;
     let uploadOperationResponseObject = (await uploadUtils._performUpload(uploadUrl, snSbomUser, snSbomPassword, payload.document, payload.documentName));
-    let successfulEnqueue = uploadOperationResponseObject.data.result.status === 'success';
-    process.env.NODE_ENV !== 'test' &&
+    let successfulEnqueue = uploadOperationResponseObject.data.result.status === "success";
+    process.env.NODE_ENV !== "test" &&
         (await core.summary
-            .addHeading('Upload Status')
-            .addQuote(`${successfulEnqueue ? '✅ Successfully enqueued SBOM...' : '❌ Could not successfully enqueue SBOM...'}`)
+            .addHeading("Upload Status")
+            .addQuote(`${successfulEnqueue ? "✅ Successfully enqueued SBOM..." : "❌ Could not successfully enqueue SBOM..."}`)
             .addTable([
-            (headers => (successfulEnqueue ? [...headers, { data: 'BOM Record ID', header: true }] : headers))([
-                { data: 'Status', header: true },
-                { data: 'Message', header: true }
+            ((headers) => successfulEnqueue
+                ? [...headers, { data: "BOM Record ID", header: true }]
+                : headers)([
+                { data: "Status", header: true },
+                { data: "Message", header: true },
             ]),
-            (data => (successfulEnqueue ? [...data, `${uploadOperationResponseObject.data.result.bomRecordId}`] : data))([
+            ((data) => successfulEnqueue
+                ? [
+                    ...data,
+                    `${uploadOperationResponseObject.data.result.bomRecordId}`,
+                ]
+                : data)([
                 `${uploadOperationResponseObject.data.result.status}`,
-                `${uploadOperationResponseObject.data.result.message}`
-            ])
+                `${uploadOperationResponseObject.data.result.message}`,
+            ]),
         ])
             .write());
     return uploadOperationResponseObject;
 }
 async function _performUpload(uploadUrl, snSbomUser, snSbomPassword, document, documentName) {
     return await fetch(uploadUrl, {
-        method: 'POST',
+        method: "POST",
         headers: {
-            'Content-Type': 'application/json',
-            Authorization: `Basic ${Buffer.from(snSbomUser + ':' + snSbomPassword).toString('base64')}`
+            "Content-Type": "application/json",
+            Authorization: `Basic ${Buffer.from(snSbomUser + ":" + snSbomPassword).toString("base64")}`,
         },
-        body: JSON.stringify(document)
+        body: JSON.stringify(document),
     })
-        .then(response => response.json())
-        .then(data => ({
+        .then((response) => response.json())
+        .then((data) => ({
         data: data,
-        documentName: documentName
+        documentName: documentName,
     }))
-        .catch(error => {
+        .catch((error) => {
         core.warning(`An error occurred while uploading SBOM: ${error.message}`);
         throw error;
     });
@@ -31285,21 +31293,21 @@ async function run() {
         await (0, validate_1.validate)(actionArguments, schemas_1.SchemaType.action_inputs);
         let payload = await (0, arbitrator_1.arbitrate)(actionArguments);
         if (payload == undefined) {
-            throw new Error('Could not successfully fetch the SBOM document from the provider.');
+            throw new Error("Could not successfully fetch the SBOM document from the provider.");
         }
         let uploadOperationResponseObject = await (0, upload_1.upload)(actionArguments, payload);
-        if (uploadOperationResponseObject.data.result.status !== 'success') {
-            core.setFailed('Could not upload SBOM to ServiceNow successfully.');
+        if (uploadOperationResponseObject.data.result.status !== "success") {
+            core.setFailed("Could not upload SBOM to ServiceNow successfully.");
             if (uploadOperationResponseObject.data.result.message) {
                 core.error(uploadOperationResponseObject.data.result.message);
             }
             return;
         }
-        console.log('result', uploadOperationResponseObject);
-        core.setOutput('bomRecordId', uploadOperationResponseObject.data.result.bomRecordId);
-        core.setOutput('status', uploadOperationResponseObject.data.result.status);
-        core.setOutput('message', uploadOperationResponseObject.data.result.message);
-        core.setOutput('apiResponseObject', JSON.stringify(uploadOperationResponseObject.data));
+        console.log("result", uploadOperationResponseObject);
+        core.setOutput("bomRecordId", uploadOperationResponseObject.data.result.bomRecordId);
+        core.setOutput("status", uploadOperationResponseObject.data.result.status);
+        core.setOutput("message", uploadOperationResponseObject.data.result.message);
+        core.setOutput("apiResponseObject", JSON.stringify(uploadOperationResponseObject.data));
     }
     catch (error) {
         if (error instanceof Error)
@@ -31347,10 +31355,12 @@ async function arbitrate(actionArguments) {
     const { provider } = actionArguments;
     let documentTuple;
     if (provider === action_1.Provider.dependencyGraph) {
-        documentTuple = await dependencyGraphProvider.fetchFromDependencyGraph(actionArguments);
+        documentTuple =
+            await dependencyGraphProvider.fetchFromDependencyGraph(actionArguments);
     }
     else if (provider === action_1.Provider.repository) {
-        documentTuple = await repositoryProvider.fetchFromRepository(actionArguments);
+        documentTuple =
+            await repositoryProvider.fetchFromRepository(actionArguments);
     }
     else {
         documentTuple = undefined;
@@ -31398,16 +31408,16 @@ async function fetchFromDependencyGraph(actionArguments) {
     let requestArguments = {
         ghAccountOwner: actionArguments.ghAccountOwner,
         ghToken: actionArguments.secrets.ghToken,
-        repository: actionArguments.repository
+        repository: actionArguments.repository,
     };
     if (!(0, utils_1.allPropertiesDefined)(requestArguments)) {
         throw new Error(errors_1.INVALID_ARGS_FOR_DEPENDENCY_GRAPH_FETCH.message);
     }
     let response = await new utils.RequestBuilder()
         .url(new URL(`https://api.github.com/repos/${requestArguments.ghAccountOwner}/${requestArguments.repository}/dependency-graph/sbom`))
-        .header('Accept', 'application/vnd.github+json')
-        .header('Authorization', `Bearer ${requestArguments.ghToken}`)
-        .header('X-GitHub-Api-Version', '2022-11-28')
+        .header("Accept", "application/vnd.github+json")
+        .header("Authorization", `Bearer ${requestArguments.ghToken}`)
+        .header("X-GitHub-Api-Version", "2022-11-28")
         .build();
     let body = await response.json();
     if (response.status === 404) {
@@ -31417,7 +31427,7 @@ async function fetchFromDependencyGraph(actionArguments) {
         throw new Error((0, errors_1.FETCH_DEPENDENCY_GRAPH_STATUS_403)(JSON.stringify(body)).message);
     }
     else {
-        return { document: body.sbom, documentName: body.sbom.name, type: 'spdx' };
+        return { document: body.sbom, documentName: body.sbom.name, type: "spdx" };
     }
 }
 
@@ -31463,34 +31473,38 @@ async function fetchFromRepository(actionArguments) {
         ghAccountOwner: actionArguments.ghAccountOwner,
         ghToken: actionArguments.secrets.ghToken,
         repository: actionArguments.repository,
-        path: actionArguments.path
+        path: actionArguments.path,
     };
     if (!(0, utils_1.allPropertiesDefined)(requestArguments)) {
         throw new Error(errors_1.INVALID_ARGS_FOR_REPOSITORY_FETCH.message);
     }
+    let url = new URL(`https://api.github.com/repos/${requestArguments.ghAccountOwner}/${requestArguments.repository}/contents/${actionArguments.path}`);
+    if (actionArguments.ref) {
+        url.search = new URLSearchParams({ ref: actionArguments.ref }).toString();
+    }
     let response = await new utils.RequestBuilder()
-        .url(new URL(`https://api.github.com/repos/${requestArguments.ghAccountOwner}/${requestArguments.repository}/contents/${actionArguments.path}`))
-        .header('Accept', 'application/vnd.github+json')
-        .header('Authorization', `Bearer ${requestArguments.ghToken}`)
-        .header('X-GitHub-Api-Version', '2022-11-28')
+        .url(url)
+        .header("Accept", "application/vnd.github+json")
+        .header("Authorization", `Bearer ${requestArguments.ghToken}`)
+        .header("X-GitHub-Api-Version", "2022-11-28")
         .build();
     if (response.status === 200) {
         let body = await response.json();
         if (body.content == undefined) {
-            core.setFailed('The contents of targeted SBOM is empty.');
+            core.setFailed("The contents of targeted SBOM is empty.");
             return;
         }
-        if (body.type === 'dir') {
+        if (body.type === "dir") {
             core.setFailed(`Action does not support directory paths. Please provide a path to a file.`);
             return;
         }
-        else if (body.type === 'file') {
+        else if (body.type === "file") {
             if (body.download_url == undefined) {
-                core.setFailed('Action is unable to download the targeted SBOM file.');
+                core.setFailed("Action is unable to download the targeted SBOM file.");
                 return;
             }
-            let document = await fetch(body.download_url).then(resp => resp.json());
-            return { document, documentName: body.name, type: 'spdx' };
+            let document = await fetch(body.download_url).then((resp) => resp.json());
+            return { document, documentName: body.name, type: "spdx" };
         }
         else {
             core.setFailed(`Action does not support uploading of targeted resource type: ${body.type}`);
@@ -31525,7 +31539,7 @@ class RequestBuilder {
     }
     build() {
         if (this._url === undefined) {
-            throw new Error((0, errors_1.REQUEST_BUILDER_ERROR_INSUFFICIENT_DATA)('URL is undefined.').message);
+            throw new Error((0, errors_1.REQUEST_BUILDER_ERROR_INSUFFICIENT_DATA)("URL is undefined.").message);
         }
         let options = {};
         if (this._headers) {
@@ -31567,18 +31581,34 @@ var Provider;
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.REQUEST_STATUS_ERROR_INSUFFICIENT_DATA = exports.REQUEST_BUILDER_ERROR_INSUFFICIENT_DATA = exports.INVALID_ARGS_FOR_REPOSITORY_FETCH = exports.FETCH_DEPENDENCY_GRAPH_STATUS_403 = exports.FETCH_DEPENDENCY_GRAPH_STATUS_404 = exports.INVALID_ARGS_FOR_DEPENDENCY_GRAPH_FETCH = exports.INVALID_INPUT_VALUES = exports.UNABLE_TO_RESOLVE_SCHEMA = void 0;
-exports.UNABLE_TO_RESOLVE_SCHEMA = { message: 'Unable to identify which schema to validate.' };
-const INVALID_INPUT_VALUES = (errors) => ({ message: `The provided input values are invalid. Please review inputs before continuing: ${JSON.stringify(errors)}` });
+exports.UNABLE_TO_RESOLVE_SCHEMA = {
+    message: "Unable to identify which schema to validate.",
+};
+const INVALID_INPUT_VALUES = (errors) => ({
+    message: `The provided input values are invalid. Please review inputs before continuing: ${JSON.stringify(errors)}`,
+});
 exports.INVALID_INPUT_VALUES = INVALID_INPUT_VALUES;
-exports.INVALID_ARGS_FOR_DEPENDENCY_GRAPH_FETCH = { message: 'Missing required argument for generating SBOM from target repository.' };
-const FETCH_DEPENDENCY_GRAPH_STATUS_404 = (error) => ({ message: `Could not find supplied resource: ${error}` });
+exports.INVALID_ARGS_FOR_DEPENDENCY_GRAPH_FETCH = {
+    message: "Missing required argument for generating SBOM from target repository.",
+};
+const FETCH_DEPENDENCY_GRAPH_STATUS_404 = (error) => ({
+    message: `Could not find supplied resource: ${error}`,
+});
 exports.FETCH_DEPENDENCY_GRAPH_STATUS_404 = FETCH_DEPENDENCY_GRAPH_STATUS_404;
-const FETCH_DEPENDENCY_GRAPH_STATUS_403 = (error) => ({ message: `Could not find access supplied resource: ${error}` });
+const FETCH_DEPENDENCY_GRAPH_STATUS_403 = (error) => ({
+    message: `Could not find access supplied resource: ${error}`,
+});
 exports.FETCH_DEPENDENCY_GRAPH_STATUS_403 = FETCH_DEPENDENCY_GRAPH_STATUS_403;
-exports.INVALID_ARGS_FOR_REPOSITORY_FETCH = { message: 'Missing required argument for generating SBOM from target repository.' };
-const REQUEST_BUILDER_ERROR_INSUFFICIENT_DATA = (error) => ({ message: `Could not successfully build request due to insufficient data: ${error}` });
+exports.INVALID_ARGS_FOR_REPOSITORY_FETCH = {
+    message: "Missing required argument for generating SBOM from target repository.",
+};
+const REQUEST_BUILDER_ERROR_INSUFFICIENT_DATA = (error) => ({
+    message: `Could not successfully build request due to insufficient data: ${error}`,
+});
 exports.REQUEST_BUILDER_ERROR_INSUFFICIENT_DATA = REQUEST_BUILDER_ERROR_INSUFFICIENT_DATA;
-const REQUEST_STATUS_ERROR_INSUFFICIENT_DATA = (error) => ({ message: `Could not perform status API request due to insufficient data: ${error}` });
+const REQUEST_STATUS_ERROR_INSUFFICIENT_DATA = (error) => ({
+    message: `Could not perform status API request due to insufficient data: ${error}`,
+});
 exports.REQUEST_STATUS_ERROR_INSUFFICIENT_DATA = REQUEST_STATUS_ERROR_INSUFFICIENT_DATA;
 
 
@@ -31633,6 +31663,7 @@ exports._secretArguments = _secretArguments;
 exports._sbomRestApiArguments = _sbomRestApiArguments;
 exports._actionArguments = _actionArguments;
 const core = __importStar(__nccwpck_require__(2186));
+const action_1 = __nccwpck_require__(1575);
 /**
  * Assembles the requisite input arguments provided to the GitHub Action.
  * @returns {*} An object of secret and public arguments.
@@ -31645,33 +31676,35 @@ function setup() {
 }
 function _secretArguments() {
     return {
-        snSbomUser: core.getInput('snSbomUser'),
-        snSbomPassword: core.getInput('snSbomPassword'),
-        snInstanceUrl: core.getInput('snInstanceUrl'),
-        ghToken: core.getInput('ghToken')
+        snSbomUser: core.getInput("snSbomUser"),
+        snSbomPassword: core.getInput("snSbomPassword"),
+        snInstanceUrl: core.getInput("snInstanceUrl"),
+        ghToken: core.getInput("ghToken"),
     };
 }
 function _sbomRestApiArguments() {
     return {
-        businessApplicationId: core.getInput('businessApplicationId'),
-        businessApplicationName: core.getInput('businessApplicationName'),
-        buildId: core.getInput('buildId'),
-        productModelId: core.getInput('productModelId'),
-        requestedBy: core.getInput('requestedBy'),
-        lifecycleStage: core.getInput('lifecycleStage'),
-        fetchVulnerabilityInfo: core.getInput('fetchVulnerabilityInfo') === 'true',
-        fetchPackageInfo: core.getInput('fetchPackageInfo') === 'true',
-        sbomSource: core.getInput('sbomSource')
+        businessApplicationId: core.getInput("businessApplicationId"),
+        businessApplicationName: core.getInput("businessApplicationName"),
+        buildId: core.getInput("buildId") || String(Date.now()),
+        productModelId: core.getInput("productModelId"),
+        requestedBy: core.getInput("requestedBy") || "devops",
+        lifecycleStage: core.getInput("lifecycleStage") ||
+            action_1.LifecycleStage.pre_production,
+        fetchVulnerabilityInfo: core.getInput("fetchVulnerabilityInfo") === "true",
+        fetchPackageInfo: core.getInput("fetchPackageInfo") === "true",
+        sbomSource: core.getInput("sbomSource"),
     };
 }
 function _actionArguments() {
     return {
-        ghAccountOwner: core.getInput('ghAccountOwner'),
-        provider: core.getInput('provider'),
-        repository: core.getInput('repository'),
-        path: core.getInput('path'),
+        ghAccountOwner: core.getInput("ghAccountOwner"),
+        provider: core.getInput("provider"),
+        repository: core.getInput("repository"),
+        path: core.getInput("path"),
+        ref: core.getInput("ref"),
         secrets: _secretArguments(),
-        sbomRestApiUploadArguments: _sbomRestApiArguments()
+        sbomRestApiUploadArguments: _sbomRestApiArguments(),
     };
 }
 
@@ -31686,7 +31719,7 @@ function _actionArguments() {
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.allPropertiesDefined = allPropertiesDefined;
 function allPropertiesDefined(obj) {
-    return Object.keys(obj).every(key => obj[key] !== undefined);
+    return Object.keys(obj).every((key) => obj[key] !== undefined);
 }
 
 
@@ -31737,13 +31770,16 @@ async function generateValidationErrorSummary(errors) {
         return;
     }
     await core.summary
-        .addHeading('Invalid runtime arguments')
+        .addHeading("Invalid runtime arguments")
         .addTable([
         [
-            { data: 'Property Name', header: true },
-            { data: 'Error Message', header: true }
+            { data: "Property Name", header: true },
+            { data: "Error Message", header: true },
         ],
-        errors.flatMap(error => [`${error.instancePath.split('/').pop()}`, `${error.message}`])
+        errors.flatMap((error) => [
+            `${error.instancePath.split("/").pop()}`,
+            `${error.message}`,
+        ]),
     ])
         .write();
 }
@@ -31759,7 +31795,7 @@ async function validate(data, schema = schemas_1.SchemaType.action_inputs) {
     const validator = ajv.compile(jsonSchema);
     const isValid = validator(data);
     if (!isValid) {
-        if (main_1.process && main_1.process.env.NODE_ENV !== 'test')
+        if (main_1.process && main_1.process.env.NODE_ENV !== "test")
             await generateValidationErrorSummary(validator.errors);
         throw new Error((0, errors_1.INVALID_INPUT_VALUES)(validator.errors).message);
     }
@@ -34455,7 +34491,7 @@ module.exports = JSON.parse('{"name":"dotenv","version":"16.4.5","description":"
 /***/ ((module) => {
 
 "use strict";
-module.exports = JSON.parse('{"$schema":"http://json-schema.org/draft-07/schema#","type":"object","properties":{"provider":{"type":"string","enum":["repository","dependencyGraph"]},"repository":{"type":"string"},"path":{"type":"string"},"ghAccountOwner":{"type":"string"},"secrets":{"required":["snSbomUser","snSbomPassword","snInstanceUrl"],"type":"object","properties":{"snSbomUser":{"type":"string"},"snSbomPassword":{"type":"string"},"snInstanceUrl":{"type":"string"},"ghToken":{"type":"string"}}},"sbomRestApiUploadArguments":{"type":"object","properties":{"businessApplicationId":{"type":"string"},"businessApplicationName":{"type":"string"},"buildId":{"type":"string"},"productModelId":{"type":"string"},"requestedBy":{"type":"string"},"lifecycleStage":{"type":"string","enum":["pre_production","production"]},"fetchVulnerabilityInfo":{"type":"boolean"},"fetchPackageInfo":{"type":"boolean"},"sbomSource":{"type":"string"}}}},"required":["provider"],"additionalProperties":false}');
+module.exports = JSON.parse('{"$schema":"http://json-schema.org/draft-07/schema#","type":"object","properties":{"provider":{"type":"string","enum":["repository","dependencyGraph"]},"repository":{"type":"string"},"path":{"type":"string"},"ref":{"type":"string"},"ghAccountOwner":{"type":"string"},"secrets":{"required":["snSbomUser","snSbomPassword","snInstanceUrl"],"type":"object","properties":{"snSbomUser":{"type":"string"},"snSbomPassword":{"type":"string"},"snInstanceUrl":{"type":"string"},"ghToken":{"type":"string"}}},"sbomRestApiUploadArguments":{"type":"object","properties":{"businessApplicationId":{"type":"string"},"businessApplicationName":{"type":"string"},"buildId":{"type":"string"},"productModelId":{"type":"string"},"requestedBy":{"type":"string"},"lifecycleStage":{"type":"string","enum":["pre_production","production"]},"fetchVulnerabilityInfo":{"type":"boolean"},"fetchPackageInfo":{"type":"boolean"},"fetchLicenseInfo":{"type":"boolean"},"sbomSource":{"type":"string"}}}},"required":["provider"],"additionalProperties":false}');
 
 /***/ })
 

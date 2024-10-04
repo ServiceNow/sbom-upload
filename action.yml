@@ -1,75 +1,83 @@
-name: 'SBOM Upload Action'
-description: 'An action to upload an SBOM document to ServiceNow.'
+name: "SBOM Upload Action"
+description: "An action to upload an SBOM document to ServiceNow."
 inputs:
   # Secrets
   snSbomUser:
-    description: 'Platform Username.'
+    description: "Platform Username."
     required: true
   snSbomPassword:
-    description: 'Platform Password.'
+    description: "Platform Password."
     required: true
   snInstanceUrl:
-    description: 'The URL of the ServiceNow Platform instance.'
+    description: "The URL of the ServiceNow Platform instance."
     required: true
   ghToken:
-    description: 'The GitHub Token of the SBOM provider repository.'
+    description: "The GitHub Token of the SBOM provider repository."
     required: false
 
   # Arguments
   ghAccountOwner:
-    description: 'The owner of the provider GitHub repository.'
+    description: "The owner of the provider GitHub repository."
     required: false
   provider:
-    description: 'The provider type.'
+    description: "The provider type."
     required: true
-    default: 'repository'
+    default: "repository"
   repository:
-    description: 'The repository from which the SBOM will be picked.'
+    description: "The repository from which the SBOM will be picked."
     required: false
   path:
-    description: 'The absolute path from repository root to the SBOM document to be picked.'
+    description: "The absolute path from repository root to the SBOM document to be picked."
+    required: false
+  ref:
+    description: "The branch, reference, or tag from which the SBOM file will be picked if using the repository provider."
     required: false
 
   # POST/Upload API Arguments
   businessApplicationId:
-    description: 'SYS ID of the business application to map with the root application of given SBOM.'
+    description: "SYS ID of the business application to map with the root application of given SBOM."
     required: false
   businessApplicationName:
-    description: 'Name of business application to map with the root application of given SBOM.'
+    description: "Name of business application to map with the root application of given SBOM."
     required: false
   buildId:
-    description: 'Build ID of the SBOM build.'
+    description: "Build ID of the SBOM build."
     required: false
   productModelId:
-    description: 'SYS ID of product model to map with the root application of given SBOM.'
+    description: "SYS ID of product model to map with the root application of given SBOM."
     required: false
   requestedBy:
-    description: 'Determines if devops workflow is executed.'
+    description: "Determines if devops workflow is executed."
     required: false
   lifecycleStage:
-    description: 'Life cycle stage of the entity (i.e., production, pre_production).'
+    description: "Life cycle stage of the entity (i.e., production, pre_production)."
     required: false
   fetchVulnerabilityInfo:
-    description: 'Flag to run the vulnerability intelligence integration.'
+    description: "Flag to run the vulnerability intelligence integration."
     required: false
   fetchPackageInfo:
-    description: 'Flag to run the package intelligence integration.'
+    description: "Flag to run the package intelligence integration."
+    required: false
+  fetchLicenseInfo:
+    description: "Flag to calculate the license classification counts"
     required: false
   sbomSource:
-    description: 'The source of the SBOM.'
+    description: "The source of the SBOM."
     required: false
 
 outputs:
   results:
-    description: 'The JSON stringified response from the status API.'
+    description: "The JSON stringified response from the status API."
+  bomRecordId:
+    description: "The BOM Record ID of the uploaded SBOM."
   statusState:
-    description: 'The completion state of the underlying status API request.'
+    description: "The completion state of the underlying status API request."
     # complete: Indicates the action completed successfully
     # timeout: Indicates the action encountered an error during execution.
 
 branding:
-  icon: 'refresh-ccw'
-  color: 'green'
+  icon: "refresh-ccw"
+  color: "green"
 runs:
-  using: 'node20'
-  main: 'dist/index.js'
+  using: "node20"
+  main: "dist/index.js"

@@ -12,6 +12,9 @@
     "path": {
       "type": "string"
     },
+    "ref": {
+      "type": "string"
+    },
     "ghAccountOwner": {
       "type": "string"
     },
@@ -59,6 +62,9 @@
           "type": "boolean"
         },
         "fetchPackageInfo": {
+          "type": "boolean"
+        },
+        "fetchLicenseInfo": {
           "type": "boolean"
         },
         "sbomSource": {
