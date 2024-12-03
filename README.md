@@ -1,222 +1,214 @@
-# Create a GitHub Action Using TypeScript
+# ServiceNow SBOM Upload
 
-[![GitHub Super-Linter](https://github.com/actions/typescript-action/actions/workflows/linter.yml/badge.svg)](https://github.com/super-linter/super-linter)
-![CI](https://github.com/actions/typescript-action/actions/workflows/ci.yml/badge.svg)
-[![Check dist/](https://github.com/actions/typescript-action/actions/workflows/check-dist.yml/badge.svg)](https://github.com/actions/typescript-action/actions/workflows/check-dist.yml)
-[![CodeQL](https://github.com/actions/typescript-action/actions/workflows/codeql-analysis.yml/badge.svg)](https://github.com/actions/typescript-action/actions/workflows/codeql-analysis.yml)
-[![Coverage](./badges/coverage.svg)](./badges/coverage.svg)
+Use this action to upload and optionally check the status of the SBOM on ServiceNow.
 
-Use this template to bootstrap the creation of a TypeScript action. :rocket:
-
-This template includes compilation support, tests, a validation workflow, publishing, and versioning
-guidance.
-
-If you are new, there's also a simpler introduction in the
-[Hello world JavaScript action repository](https://github.com/actions/hello-world-javascript-action).
-
-## Create Your Own Action
-
-To create your own action, you can use this repository as a template! Just follow the below
-instructions:
-
-1. Click the **Use this template** button at the top of the repository
-1. Select **Create a new repository**
-1. Select an owner and name for your new repository
-1. Click **Create repository**
-1. Clone your new repository
-
-> [!IMPORTANT]
+> **Product Links**
 >
-> Make sure to remove or update the [`CODEOWNERS`](./CODEOWNERS) file! For details on how to use
-> this file, see
-> [About code owners](https://docs.github.com/en/repositories/managing-your-repositorys-settings-and-features/customizing-your-repository/about-code-owners).
+> - ServiceNow [Vulnerability Response](https://www.servicenow.com/products/vulnerability-response.html#features)
+> - Vulnerability Response [technical documentation](https://docs.servicenow.com/bundle/tokyo-security-management/page/product/vulnerability-response/reference/vuln-landing-page.html)
 
-## Initial Setup
+# Usage
 
-After you've cloned the repository to your local machine or codespace, you'll need to perform some
-initial setup steps before you can develop your action.
+This action facilitates uploading a SBOM document to the SBOM Workspace. Configuring the action input parameter's `provider`, `repository`, `ref` and `path` values determines which SBOM document the action will upload.
 
-> [!NOTE]
->
-> You'll need to have a reasonably modern version of [Node.js](https://nodejs.org) handy (20.x or
-> later should work!). If you are using a version manager like
-> [`nodenv`](https://github.com/nodenv/nodenv) or [`nvm`](https://github.com/nvm-sh/nvm), this
-> template has a `.node-version` file at the root of the repository that will be used to
-> automatically switch to the correct version when you `cd` into the repository. Additionally, this
-> `.node-version` file is used by GitHub Actions in any `actions/setup-node` actions.
+### Prerequisites
 
-1. :hammer_and_wrench: Install the dependencies
+- The Vulnerability Response application must already be installed on the provided ServiceNow instance
+- The following repository secrets must be set:
 
-   ```bash
-   npm install
-   ```
+  | Secret Name        | Example                             | Description                                                                                                                                                                                                            |
+    | ------------------ | ----------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+  | `SN_INSTANCE_URL`  | `https://instance.service-now.com/` | The URL of the ServiceNow instance with an accessible SBOM Workspace. Ensure the URL has the _scheme_ (`https`), _subdomain_ (`instance`), _domain_ (`service-now`), and _top-level domain_ (`com`) for your instance. |
+  | `SN_SBOM_USER`     | `username`                          | The username used to log into the ServiceNow instance. The user should have _sbom_ingest_ role assigned to it.                                                                                                         |
+  | `SN_SBOM_PASSWORD` | `password`                          | The password used to log into the ServiceNow instance. The user should have _sbom_ingest_ role assigned to it.                                                                                                         |
+  | `GH_TOKEN`         | `gh_78dajnkrffj2806fuz7578o`        | A GitHub token used to access the repository that is storing the SBOM document.                                                                                                                                        |
 
-1. :building_construction: Package the TypeScript for distribution
+  > The `GH_TOKEN` must be generated with the [`repo`](https://docs.github.com/en/apps/oauth-apps/building-oauth-apps/scopes-for-oauth-apps#:~:text=Grants%20full%20access,owned%20by%20users.) scope.
 
-   ```bash
-   npm run bundle
-   ```
+  > GitHub repository secrets [documentation](https://docs.github.com/en/actions/security-guides/using-secrets-in-github-actions).
 
-1. :white_check_mark: Run the tests
+### Usage
 
-   ```bash
-   $ npm test
+The action may be launched from any supported [GitHub Action trigger](https://docs.github.com/en/actions/using-workflows/events-that-trigger-workflows). The example below is sensitive to `push` events.
 
-   PASS  ./index.test.js
-     ✓ throws invalid number (3ms)
-     ✓ wait 500 ms (504ms)
-     ✓ test runs (95ms)
+```yml
+on: [push]
 
-   ...
-   ```
+jobs:
+  sbom-upload:
+    runs-on: ubuntu-latest
+    name: SBOM Workspace Upload
+    steps:
+      - name: Upload
+        id: upload
+        uses: ServiceNow/vulnerability-response@2.0.1
+        with:
+          snSbomUser: ${{ secrets.SN_SBOM_USERNAME }}
+          snSbomPassword: ${{ secrets.SN_SBOM_PASSWORD }}
+          snInstanceUrl: ${{ secrets.SN_INSTANCE_URL }}
+          ghToken: ${{ secrets.GH_TOKEN }}
+          ghAccountOwner: <REPOSITORY OWNER>
+          repository: <REPOSITORY NAME>
+          provider: "repository"
+          path: "sboms/sample_sbom.txt"
+```
 
-## Update the Action Metadata
+**Non-Optional, Public Inputs: Configuration**
 
-The [`action.yml`](action.yml) file defines metadata about your action, such as input(s) and
-output(s). For details about this file, see
-[Metadata syntax for GitHub Actions](https://docs.github.com/en/actions/creating-actions/metadata-syntax-for-github-actions).
+> These inputs configure the behavior of the action.
 
-When you copy this repository, update `action.yml` with the name, description, inputs, and outputs
-for your action.
+| Input Name       | Example                           | Description                                                                                                                                                                                                                                                                                                          |
+| ---------------- | --------------------------------- |----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| `ghAccountOwner` | `github-account`                  | The account that owns the target repository.                                                                                                                                                                                                                                                                         |
+| `repository`     | `github-repository`               | The name of the repository that holds the target SBOMs.                                                                                                                                                                                                                                                              |
+| `provider`       | `repository` \| `dependencyGraph` | The value `repository` means an SBOM will be picked from a GitHub repository. The SBOM at the `ghAccountOwner/repository/path` will be picked. The value of `dependencyGraph` will generate an SBOM using GitHub's Dependency Graph API. The SBOM will be generated for the `ghAccountOwner/repository` application. |
+| `path`           | `sboms/sample_sbom.json`          | The absolute path within the provided `repository` to the SBOM document.                                                                                                                                                                                                                                             |
+| `ref` | `main` | The branch, commit, or tag where the targetted file can be found.                                                                                                                                                                                                                                                    |
 
-## Update the Action Code
+**Optional, Public Inputs: API Parameters**
 
-The [`src/`](./src/) directory is the heart of your action! This contains the source code that will
-be run when your action is invoked. You can replace the contents of this directory with your own
-code.
+> These inputs are passed as search parameters to underlying SBOM Workspace `upload` endpoint. Refer to API documentation for further details.
 
-There are a few things to keep in mind when writing your action code:
+| Input Name                | Type                           | Description                                                                        |
+| ------------------------- | ------------------------------ | ---------------------------------------------------------------------------------- |
+| `businessApplicationId`   | `<Sys ID>`                     | SYS ID of the business application to map with the root application of given SBOM. |
+| `businessApplicationName` | `String`                       | Name of business application to map with the root application of given SBOM.       |
+| `buildId`                 | `String`                       | Build ID of the SBOM build.                                                        |
+| `productModelId`          | `<Sys ID>`                     | SYS ID of product model to map with the root application of given SBOM.            |
+| `requestedBy`             | `Boolean`                      | Determines if devops workflow is executed.                                         |
+| `lifecycleStage`          | `production \| pre_production` | Life cycle stage of the entity (i.e., production, pre_production).                 |
+| `fetchVulnerabilityInfo`  | `Boolean`                      | Flag to run the vulnerability intelligence integration.                            |
+| `fetchPackageInfo`        | `Boolean`                      | Flag to run the package intelligence integration.                                  |
+| `sbomSource`              | `String`                       | The source of the SBOM.                                                            |
+| `maxStatusPollAttempts`   | `String` (Number)              | The maximum number of status poll attempts before action errors out.               |
+| `statusAttemptInterval`   | `String` (Number)              | The number of milliseconds between each status poll attempt.                       |
 
-- Most GitHub Actions toolkit and CI/CD operations are processed asynchronously. In `main.ts`, you
-  will see that the action is run in an `async` function.
+**Non-Optional, Secret Inputs**
 
-  ```javascript
-  import * as core from "@actions/core";
-  //...
+| Secret Name      | Example                             | Description                                                                            |
+| ---------------- | ----------------------------------- | -------------------------------------------------------------------------------------- |
+| `snSbomUser`     | `username`                          | The username used to authenticate into the instance that has SBOM Workspace installed. |
+| `snSbomPassword` | `password`                          | The password used to authenticate into the instance that has SBOM Workspace installed. |
+| `snInstanceUrl`  | `https://instance.service-now.com/` | The URL of the ServiceNow instance that has SBOM Workspace installed.                  |
+| `ghToken`        | `gh_78dajnkrffj2806fuz7578o`        | A GitHub token used to access the repository that is storing the SBOM document.        |
 
-  async function run() {
-    try {
-      //...
-    } catch (error) {
-      core.setFailed(error.message);
-    }
+**Annotated Fields**
+
+- `uses`: Points to the ServiceNow SBOM Upload GitHub Action. Replace `<RELEASE TAG>` with the [appropriate version](https://github.com/ServiceNow/vulnerability-response/releases) of the Action.
+- `gh-account-owner`: The account name that owns the target repository. Replace `<REPOSITORY OWNER>` with the appropriate account owner string. It can be found within the URL of the calling repository.
+- `repository`: The repository name that holds the target SBOM document. Replace `<REPOSITORY NAME>` with the appropriate repository string. It can be found within the URL of the calling repository.
+
+### Results
+
+On successful upload, the following output is display, indicating the SBOM has been uploaded and is enqueued for processing:
+
+```js
+{
+  result: {
+    status: 'success',
+    message: 'Queued for processing.',
+    bomRecordId: 'abc123xyzabc123xyzabc123xyzabc123'
   }
-  ```
-
-  For more information about the GitHub Actions toolkit, see the
-  [documentation](https://github.com/actions/toolkit/blob/master/README.md).
-
-So, what are you waiting for? Go ahead and start customizing your action!
-
-1. Create a new branch
-
-   ```bash
-   git checkout -b releases/v1
-   ```
-
-1. Replace the contents of `src/` with your action code
-1. Add tests to `__tests__/` for your source code
-1. Format, test, and build the action
-
-   ```bash
-   npm run all
-   ```
-
-   > This step is important! It will run [`ncc`](https://github.com/vercel/ncc) to build the final
-   > JavaScript action code with all dependencies included. If you do not run this step, your action
-   > will not work correctly when it is used in a workflow. This step also includes the `--license`
-   > option for `ncc`, which will create a license file for all of the production node modules used
-   > in your project.
-
-1. Commit your changes
-
-   ```bash
-   git add .
-   git commit -m "My first action is ready!"
-   ```
-
-1. Push them to your repository
-
-   ```bash
-   git push -u origin releases/v1
-   ```
-
-1. Create a pull request and get feedback on your action
-1. Merge the pull request into the `main` branch
-
-Your action is now published! :rocket:
-
-For information about versioning your action, see
-[Versioning](https://github.com/actions/toolkit/blob/master/docs/action-versioning.md) in the GitHub
-Actions toolkit.
-
-## Validate the Action
-
-You can now validate the action by referencing it in a workflow file. For example,
-[`ci.yml`](./.github/workflows/ci.yml) demonstrates how to reference an action in the same
-repository.
-
-```yaml
-steps:
-  - name: Checkout
-    id: checkout
-    uses: actions/checkout@v4
-
-  - name: Test Local Action
-    id: test-action
-    uses: ./
-    with:
-      milliseconds: 1000
-
-  - name: Print Output
-    id: output
-    run: echo "${{ steps.test-action.outputs.time }}"
+}
 ```
 
-For example workflow runs, check out the
-[Actions tab](https://github.com/actions/typescript-action/actions)! :rocket:
+To view vulnerability or package intelligence information within the GitHub Summary, set `fetchVulnerabilityInfo` or `fetchPackageInfo` to `'true'`.
 
-## Usage
+---
 
-After testing, you can create version tag(s) that developers can use to reference different stable
-versions of your action. For more information, see
-[Versioning](https://github.com/actions/toolkit/blob/master/docs/action-versioning.md) in the GitHub
-Actions toolkit.
+### Complete Example Workflow
 
-To include the action in a workflow in another repository, you can use the `uses` syntax with the
-`@` symbol to reference a specific branch, tag, or commit hash.
+The following workflow is an example use of the SBOM Action. Not all values are required.
 
-```yaml
-steps:
-  - name: Checkout
-    id: checkout
-    uses: actions/checkout@v4
+> For a given input value, a default can be set using the following syntax:
+>
+> `path: ${{ inputs.path || 'sboms/sample_sbom.json' }}`
 
-  - name: Test Local Action
-    id: test-action
-    uses: actions/typescript-action@v1 # Commit with the `v1` tag
-    with:
-      milliseconds: 1000
+```yml
+on:
+  push:
+    paths:
+      - "package.json"
+      - "pnpm-lock.yaml"
+  workflow_dispatch:
+    inputs:
+      gh-account-owner:
+        description: "The account that owns the target SBOM repository."
+        required: true
+      provider:
+        description: "The provider type for the action."
+        required: true
+        type: choice
+        default: "repository"
+        options:
+          - repository
+          - dependencyGraph
+      repository:
+        description: "The repository that holds the target SBOM documents."
+        required: true
+      path:
+        description: "The path to the target SBOM document."
+        required: true
+      lifecycle-stage:
+        description: "Denotes which environment for which this SBOM was generated (i.e., production, pre_production)."
+        required: false
+      fetch-package-info:
+        description: "Fetch Package Info"
+        required: false
+        default: "true"
+      fetch-vulnerability-info:
+        description: "Fetch Vulnerability Info"
+        required: false
+        default: "true"
+      max-status-poll-attempts:
+        description: "The maximum number of status poll attempts."
+        required: false
+        default: "5"
+      status-attempt-interval:
+        description: "The time in ms between status poll attempts."
+        required: false
+        default: "10000"
 
-  - name: Print Output
-    id: output
-    run: echo "${{ steps.test-action.outputs.time }}"
+jobs:
+  sbom-upload:
+    runs-on: ubuntu-latest
+    name: SBOM Workspace Upload
+    steps:
+      - name: Upload
+        id: upload
+        uses: ServiceNow/vulnerability-response@v2.0.1
+        with:
+          snSbomUser: ${{ secrets.SN_SBOM_USERNAME }}
+          snSbomPassword: ${{ secrets.SN_SBOM_PASSWORD }}
+          snInstanceUrl: ${{ secrets.SN_INSTANCE_URL }}
+          ghToken: ${{ secrets.GH_TOKEN }}
+          ghAccountOwner: ${{ inputs.gh-account-owner }}
+          provider: ${{ inputs.provider }}
+          repository: ${{ inputs.repository }}
+          path: ${{ inputs.path }}
+          businessApplicationId: ${{ inputs.business-application-id }}
+          businessApplicationName: ${{ inputs.business-application-name }}
+          buildId: ${{ inputs.build-id }}
+          productModelId: ${{ inputs.product-model-id }}
+          requestedBy: ${{ inputs.requested-by }}
+          lifecycleStage: ${{ inputs.lifecycle-stage }}
+          fetchVulnerabilityInfo: ${{ inputs.fetch-vulnerability-info }}
+          fetchPackageInfo: ${{ inputs.fetch-package-info }}
+          sbomSource: ${{ inputs.source-sbom }}
+          maxStatusPollAttempts: ${{ inputs.max-status-poll-attempts }}
+          statusAttemptInterval: ${{ inputs.status-attempt-interval }}
 ```
-
-## Publishing a New Release
-
-This project includes a helper script, [`script/release`](./script/release) designed to streamline
-the process of tagging and pushing new releases for GitHub Actions.
-
-GitHub Actions allows users to select a specific version of the action to use, based on release
-tags. This script simplifies this process by performing the following steps:
-
-1. **Retrieving the latest release tag:** The script starts by fetching the most recent release tag
-   by looking at the local data available in your repository.
-1. **Prompting for a new release tag:** The user is then prompted to enter a new release tag. To
-   assist with this, the script displays the latest release tag and provides a regular expression to
-   validate the format of the new tag.
-1. **Tagging the new release:** Once a valid new tag is entered, the script tags the new release.
-1. **Pushing the new tag to the remote:** Finally, the script pushes the new tag to the remote
-   repository. From here, you will need to create a new release in GitHub and users can easily
-   reference the new tag in their workflows.
+> Note: A `workflow_dispatch` event populates the `inputs` object whereas `push` will not. To enable functionality across both events, set a default value explicitly on the action's input:
+> ``` yml
+> jobs:
+>   sbom-upload:
+>   runs-on: ubuntu-latest
+>   name: SBOM Workspace Upload
+>   steps:
+>     - name: Upload
+>       id: upload
+>       uses: ServiceNow/vulnerability-response@v1.0.0
+>       with:
+>         // Truncated for brevity...
+>         ghAccountOwner: ${{ inputs.gh-account-owner || 'DEFAULT VALUE' }}
+> ```
