@@ -24,8 +24,6 @@ export function generateUploadUrl(actionArguments: ActionArguments) {
   );
   url.search = uploadSearchParams.toString();
 
-  console.log(url.toString());
-
   return url;
 }
 
@@ -94,7 +92,14 @@ export async function _performUpload(
     },
     body: JSON.stringify(document),
   })
-    .then((response) => response.json())
+    .then((response) => {
+      if (response.ok) return response.json();
+      return Promise.reject(
+        new Error(
+          `Could not successfully upload to ServiceNow instance :: status: ${response.status}, message: ${response.statusText}`,
+        ),
+      );
+    })
     .then(
       (data) =>
         ({

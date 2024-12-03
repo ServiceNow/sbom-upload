@@ -1,7 +1,6 @@
 import {
   ActionArguments,
   FetchedSbomDocument,
-  FetchFromDependencyGraphArguments,
   FetchFromRepository,
 } from "@/src/types/action";
 import { allPropertiesDefined } from "@/src/utils/utils";

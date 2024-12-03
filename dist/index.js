@@ -31191,7 +31191,9 @@ function generateUploadUrl(actionArguments) {
 async function upload(actionArguments, payload) {
     console.log("Uploading SBOM to ServiceNow...");
     let uploadUrl = generateUploadUrl(actionArguments);
+    console.log(uploadUrl);
     let { snSbomUser, snSbomPassword } = actionArguments.secrets;
+    console.log(snSbomUser, snSbomPassword);
     let uploadOperationResponseObject = (await uploadUtils._performUpload(uploadUrl, snSbomUser, snSbomPassword, payload.document, payload.documentName));
     let successfulEnqueue = uploadOperationResponseObject.data.result.status === "success";
     process.env.NODE_ENV !== "test" &&
@@ -31227,7 +31229,11 @@ async function _performUpload(uploadUrl, snSbomUser, snSbomPassword, document, d
         },
         body: JSON.stringify(document),
     })
-        .then((response) => response.json())
+        .then((response) => {
+        if (response.ok)
+            return response.json();
+        return Promise.reject(new Error(`Could not successfully upload to ServiceNow instance :: status: ${response.status}, message: ${response.statusText}`));
+    })
         .then((data) => ({
         data: data,
         documentName: documentName,
@@ -31290,6 +31296,7 @@ dotenv_1.default.config();
 async function run() {
     try {
         const actionArguments = (0, setup_1.setup)();
+        console.log("Action Arguments: ", JSON.stringify(actionArguments, null, 2));
         await (0, validate_1.validate)(actionArguments, schemas_1.SchemaType.action_inputs);
         let payload = await (0, arbitrator_1.arbitrate)(actionArguments);
         if (payload == undefined) {
@@ -31365,6 +31372,7 @@ async function arbitrate(actionArguments) {
     else {
         documentTuple = undefined;
     }
+    console.log("Document tuple: ", JSON.stringify(documentTuple, null, 2));
     return documentTuple;
 }
 
@@ -31482,6 +31490,7 @@ async function fetchFromRepository(actionArguments) {
     if (actionArguments.ref) {
         url.search = new URLSearchParams({ ref: actionArguments.ref }).toString();
     }
+    console.log("Reached", url);
     let response = await new utils.RequestBuilder()
         .url(url)
         .header("Accept", "application/vnd.github+json")

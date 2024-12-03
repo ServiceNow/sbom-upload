@@ -1,0 +1,14 @@
+{
+  "action": "sbom-upload",
+  "inputs": {
+    "gh-account-owner": "jack-gronenthal-sn",
+    "provider": "repository",
+    "repository": "sbom-upload-test",
+    "path": "sboms/sample_sbom.json",
+    "business-application-id": "Some business application id",
+    "lifecycle_stage": "pre_production",
+    "fetch-package-info": "true",
+    "fetch-vulnerability-info": "true",
+    "product-model-id": "ProductModel:ACB"
+  }
+}
